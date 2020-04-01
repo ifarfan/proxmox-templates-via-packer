@@ -1,0 +1,64 @@
+{
+  "description": "Build Ubuntu 18.04 (bionic) x86_64 Proxmox template",
+  "variables": {
+    "proxmox_url": "https://192.168.136.11:8006/api2/json",
+    "proxmox_username": "root@pam",
+    "proxmox_password": "{{env `PROXMOX_PWD`}}",
+    "iso_filename": "ubuntu_bionic_minimal.iso",
+    "vm_name": "ubuntu-1804",
+    "template_description": "Ubuntu 18.04 x86_64 template built with packer",
+    "vm_memory": "2048",
+    "vm_cores": "1",
+    "vm_disksize": "8G",
+    "ssh_username": "proxmox-temp",
+    "ssh_password": "pr0xm0x-t3mp!"
+  },
+  "sensitive-variables": ["proxmox_password", "ssh_password" ],
+  "provisioners": [],
+  "builders": [
+    {
+      "type": "proxmox",
+      "proxmox_url":  "{{user `proxmox_url`}}",
+      "insecure_skip_tls_verify": true,
+      "username": "{{user `proxmox_username`}}",
+      "password": "{{user `proxmox_password`}}",
+      "vm_name": "{{user `vm_name`}}",
+      "template_name": "{{user `vm_name`}}-template",
+      "template_description":"{{user `template_description`}}",
+      "memory": "{{user `vm_memory`}}",
+      "cores": "{{user `vm_cores`}}",
+      "cpu_type": "host",
+      "os": "l26",
+      "http_directory": "http",
+      "node": "macmini1",
+      "network_adapters": [
+        {
+          "model": "virtio",
+          "bridge": "vmbr0"
+        }
+      ],
+      "disks": [
+        {
+          "type": "scsi",
+          "disk_size": "{{user `vm_disksize`}}",
+          "storage_pool": "local-lvm",
+          "storage_pool_type": "lvm"
+        }
+      ],
+      "ssh_username": "{{user `ssh_username`}}",
+      "ssh_password": "{{user `ssh_password`}}",
+      "ssh_timeout": "30m",
+      "iso_file": "local:iso/{{user `iso_filename`}}",
+      "unmount_iso": true,
+      "boot_wait": "10s",
+      "boot_command": [
+        "<esc><wait>",
+        "install",
+        " initrd=initrd.gz auto=true priority=critical",
+        " preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg",
+        " --- <wait>",
+        "<enter><wait>"
+      ]
+    }
+  ]
+}
