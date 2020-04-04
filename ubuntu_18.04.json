@@ -76,14 +76,14 @@
       ],
 			"inline": [
         "##  Final upgrade",
-				"sudo apt-get update",
-				"sudo apt-get -y upgrade",
-				"sudo apt-get -y dist-upgrade",
+        "sudo apt-get update",
+        "sudo apt-get -y upgrade",
+        "sudo apt-get -y dist-upgrade",
         "sudo apt-get -y install qemu-guest-agent cloud-init",
         "##  Disable root user",
         "sudo passwd --l root",
         "##  Exit out",
-				"exit 0"
+        "exit 0"
 			]
 		}
 	],
