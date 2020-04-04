@@ -70,7 +70,8 @@
 	"provisioners": [
 		{
 			"pause_before": "20s",
-			"type": "shell",
+      "type": "shell",
+      "inline_shebang": "/bin/bash -e",
 			"environment_vars": [
         "DEBIAN_FRONTEND=noninteractive"
       ],
@@ -86,21 +87,27 @@
         "#  Create Ansible user",
         "#",
         "sudo useradd -c '{{user `ansible_fullname`}}' -s /bin/bash -m {{user `ansible_username`}}",
-        "#sudo mkdir -p /home/{{user `ansible_username`}}/.ssh",
-        "#sudo echo '{{user `ansible_ssh_key`}}' >> /home/{{user `ansible_username`}}/.ssh/authorized_keys",
-        "#sudo chmod 0600 /home/{{user `ansible_username`}}/.ssh/authorized_keys",
-        "#sudo chown -R {{user `ansible_username`}}:{{user `ansible_username`}} /home/{{user `ansible_username`}}/.ssh",
+        "sudo mkdir -p /home/{{user `ansible_username`}}/.ssh",
+        "echo '{{user `ansible_ssh_key`}}' | sudo tee /home/{{user `ansible_username`}}/.ssh/authorized_keys",
+        "sudo chmod 0600 /home/{{user `ansible_username`}}/.ssh/authorized_keys",
+        "sudo chown -R {{user `ansible_username`}}:{{user `ansible_username`}} /home/{{user `ansible_username`}}/.ssh",
         "#",
         "#  Add Ansible to sudoers",
         "#",
-        "#sudo echo '#  Disable tty to enable {{user `ansible_fullname`}} pipelining' >> /etc/sudoers.d/90-{{user `ansible_username`}}",
-        "#sudo echo 'Defaults:{{user `ansible_username`}} !requiretty' >> /etc/sudoers.d/90-{{user `ansible_username`}}",
-        "#sudo echo '{{user `ansible_username`}} ALL=(ALL:ALL) NOPASSWD: ALL' >> /etc/sudoers.d/90-{{user `ansible_username`}}",
-        "#sudo chmod 0440 /etc/sudoers.d/90-{{user `ansible_username`}}",
-        "#sudo chown -R {{user `ansible_username`}}:{{user `ansible_username`}} /etc/sudoers.d/90-{{user `ansible_username`}}",
+        "echo '#  Disable tty to enable {{user `ansible_fullname`}} pipelining' | sudo tee -a /etc/sudoers.d/90-{{user `ansible_username`}}",
+        "echo 'Defaults:{{user `ansible_username`}} !requiretty' | sudo tee -a /etc/sudoers.d/90-{{user `ansible_username`}}",
+        "echo '{{user `ansible_username`}} ALL=(ALL:ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers.d/90-{{user `ansible_username`}}",
+        "sudo chmod 0440 /etc/sudoers.d/90-{{user `ansible_username`}}",
+        "sudo chown -R {{user `ansible_username`}}:{{user `ansible_username`}} /etc/sudoers.d/90-{{user `ansible_username`}}",
         "#",
-        "#  Disable root user + exit out",
+        "#  Reset machine-id",
+        "cat /dev/null | sudo tee /etc/machine-id",
+        "cat /dev/null | sudo tee /var/lib/dbus/machine-id",
         "#",
+        "#",
+        "#  Disable root + packer users + exit out",
+        "#",
+        "sudo passwd --l {{user `ssh_username`}}",
         "sudo passwd --l root",
         "exit 0"
 			]
@@ -113,8 +120,7 @@
       "inline": [
         "qm set {{user `vm_id`}} --scsihw virtio-scsi-pci",
         "qm set {{user `vm_id`}} --ide2 local-lvm:cloudinit",
-        "qm set {{user `vm_id`}} --boot c --bootdisk scsi0",
-        "qm set {{user `vm_id`}} --vga std"
+        "qm set {{user `vm_id`}} --boot c --bootdisk scsi0"
       ]
     }
   ]
