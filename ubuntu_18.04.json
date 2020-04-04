@@ -5,16 +5,19 @@
     "proxmox_username": "root@pam",
     "proxmox_password": "{{env `PROXMOX_PWD`}}",
     "iso_filename": "ubuntu_bionic_minimal.iso",
+    "vm_id": "100",
     "vm_name": "ubuntu-1804",
     "template_description": "Ubuntu 18.04 x86_64 template built with packer",
     "vm_memory": "2048",
     "vm_cores": "1",
     "vm_disksize": "8G",
-    "ssh_username": "proxmox-temp",
-    "ssh_password": "pr0xm0x-t3mp!"
+    "ssh_username": "packer",
+    "ssh_password": "p@ck3r-t3mp!"
   },
-  "sensitive-variables": ["proxmox_password", "ssh_password" ],
-  "provisioners": [],
+  "sensitive-variables": [
+    "proxmox_password",
+    "ssh_password"
+  ],
   "builders": [
     {
       "type": "proxmox",
@@ -22,6 +25,7 @@
       "insecure_skip_tls_verify": true,
       "username": "{{user `proxmox_username`}}",
       "password": "{{user `proxmox_password`}}",
+      "vm_id":  "{{user `vm_id`}}",
       "vm_name": "{{user `vm_name`}}",
       "template_name": "{{user `vm_name`}}-template",
       "template_description":"{{user `template_description`}}",
@@ -54,10 +58,48 @@
       "boot_command": [
         "<esc><wait>",
         "install",
-        " initrd=initrd.gz auto=true priority=critical",
-        " preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg",
+        " initrd=initrd.gz",
+        " auto=true",
+        " priority=critical",
+        " preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ubuntu_preseed.cfg",
         " --- <wait>",
         "<enter><wait>"
+      ]
+    }
+  ],
+	"provisioners": [
+		{
+			"pause_before": "20s",
+			"type": "shell",
+			"environment_vars": [
+        "DEBIAN_FRONTEND=noninteractive"
+      ],
+			"inline": [
+        "##  Final upgrade",
+				"sudo apt-get update",
+				"sudo apt-get -y upgrade",
+				"sudo apt-get -y dist-upgrade",
+        "sudo apt-get -y install qemu-guest-agent cloud-init",
+        "##  Reset machine-id",
+        "sudo cat /dev/null > /etc/machine-id",
+        "sudo cat /dev/null > /var/lib/dbus/machine-id",
+        "##  Disable root user",
+        "sudo passwd --l root",
+        "##  Exit out",
+				"exit 0"
+			]
+		}
+	],
+  "post-processors": [
+    {
+      "type": "shell-local",
+      "inline_shebang": "/bin/bash -e",
+      "inline": [
+        "qm set {{user `vm_id`}} --scsihw virtio-scsi-pci",
+        "qm set {{user `vm_id`}} --ide2 local-lvm:cloudinit",
+        "qm set {{user `vm_id`}} --boot c --bootdisk scsi0",
+        "qm set {{user `vm_id`}} --serial0 socket",
+        "qm set {{user `vm_id`}} --vga serial0"
       ]
     }
   ]
