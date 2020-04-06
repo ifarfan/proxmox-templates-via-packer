@@ -1,20 +1,23 @@
 {
   "description": "Build Ubuntu 20.04 (focal) x86_64 Proxmox template",
   "variables": {
-    "proxmox_url": "https://192.168.136.11:8006/api2/json",
+    "proxmox_url": "https://localhost:8006/api2/json",
     "proxmox_username": "root@pam",
     "proxmox_password": "{{env `PROXMOX_PWD`}}",
     "iso_filename": "ubuntu_focal_minimal.iso",
+    "vm_id": "101",
     "vm_name": "ubuntu-2004",
     "template_description": "Ubuntu 20.04 x86_64 template built with packer",
     "vm_memory": "2048",
     "vm_cores": "1",
     "vm_disksize": "8G",
-    "ssh_username": "proxmox-temp",
-    "ssh_password": "pr0xm0x-t3mp!"
+    "ssh_username": "packer",
+    "ssh_password": "p@ck3r-t3mp!"
   },
-  "sensitive-variables": ["proxmox_password", "ssh_password" ],
-  "provisioners": [],
+  "sensitive-variables": [
+    "proxmox_password",
+    "ssh_password"
+  ],
   "builders": [
     {
       "type": "proxmox",
@@ -22,6 +25,7 @@
       "insecure_skip_tls_verify": true,
       "username": "{{user `proxmox_username`}}",
       "password": "{{user `proxmox_password`}}",
+      "vm_id":  "{{user `vm_id`}}",
       "vm_name": "{{user `vm_name`}}",
       "template_name": "{{user `vm_name`}}-template",
       "template_description":"{{user `template_description`}}",
@@ -54,10 +58,39 @@
       "boot_command": [
         "<esc><wait>",
         "install",
-        " initrd=initrd.gz auto=true priority=critical",
-        " preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ubuntu_preseed.cfg",
+        " initrd=initrd.gz",
+        " auto=true",
+        " priority=critical",
+        " preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ubuntu_20.04.preseed.cfg",
         " --- <wait>",
         "<enter><wait>"
+      ]
+    }
+  ],
+  "provisioners": [
+    {
+      "pause_before": "20s",
+      "type": "shell",
+      "inline_shebang": "/bin/bash -e",
+      "environment_vars": [
+        "DEBIAN_FRONTEND=noninteractive"
+      ],
+      "inline": [
+        "#  Disable root + packer users + exit out",
+        "#sudo passwd --quiet --lock root",
+        "sudo passwd --quiet --lock {{user `ssh_username`}}",
+        "exit 0"
+      ]
+    }
+  ],
+  "post-processors": [
+    {
+      "type": "shell-local",
+      "inline_shebang": "/bin/bash -e",
+      "inline": [
+        "qm set {{user `vm_id`}} --scsihw virtio-scsi-pci",
+        "qm set {{user `vm_id`}} --ide2 local-lvm:cloudinit",
+        "qm set {{user `vm_id`}} --boot c --bootdisk scsi0"
       ]
     }
   ]

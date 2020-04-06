@@ -1,7 +1,7 @@
 {
   "description": "Build Ubuntu 18.04 (bionic) x86_64 Proxmox template",
   "variables": {
-    "proxmox_url": "https://192.168.136.11:8006/api2/json",
+    "proxmox_url": "https://localhost:8006/api2/json",
     "proxmox_username": "root@pam",
     "proxmox_password": "{{env `PROXMOX_PWD`}}",
     "iso_filename": "ubuntu_bionic_minimal.iso",
@@ -61,58 +61,28 @@
         " initrd=initrd.gz",
         " auto=true",
         " priority=critical",
-        " preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ubuntu_preseed.cfg",
+        " preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ubuntu_18.04.preseed.cfg",
         " --- <wait>",
         "<enter><wait>"
       ]
     }
   ],
-	"provisioners": [
-		{
-			"pause_before": "20s",
+  "provisioners": [
+    {
+      "pause_before": "20s",
       "type": "shell",
       "inline_shebang": "/bin/bash -e",
-			"environment_vars": [
+      "environment_vars": [
         "DEBIAN_FRONTEND=noninteractive"
       ],
-			"inline": [
-        "#",
-        "#  Final upgrade",
-        "#",
-        "sudo apt-get update",
-        "sudo apt-get -y upgrade",
-        "sudo apt-get -y dist-upgrade",
-        "sudo apt-get -y install qemu-guest-agent cloud-init",
-        "#",
-        "#  Create Ansible user",
-        "#",
-        "sudo useradd -c '{{user `ansible_fullname`}}' -s /bin/bash -m {{user `ansible_username`}}",
-        "sudo mkdir -p /home/{{user `ansible_username`}}/.ssh",
-        "echo '{{user `ansible_ssh_key`}}' | sudo tee /home/{{user `ansible_username`}}/.ssh/authorized_keys",
-        "sudo chmod 0600 /home/{{user `ansible_username`}}/.ssh/authorized_keys",
-        "sudo chown -R {{user `ansible_username`}}:{{user `ansible_username`}} /home/{{user `ansible_username`}}/.ssh",
-        "#",
-        "#  Add Ansible to sudoers",
-        "#",
-        "echo '#  Disable tty to enable {{user `ansible_fullname`}} pipelining' | sudo tee -a /etc/sudoers.d/90-{{user `ansible_username`}}",
-        "echo 'Defaults:{{user `ansible_username`}} !requiretty' | sudo tee -a /etc/sudoers.d/90-{{user `ansible_username`}}",
-        "echo '{{user `ansible_username`}} ALL=(ALL:ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers.d/90-{{user `ansible_username`}}",
-        "sudo chmod 0440 /etc/sudoers.d/90-{{user `ansible_username`}}",
-        "sudo chown -R {{user `ansible_username`}}:{{user `ansible_username`}} /etc/sudoers.d/90-{{user `ansible_username`}}",
-        "#",
-        "#  Reset machine-id",
-        "cat /dev/null | sudo tee /etc/machine-id",
-        "cat /dev/null | sudo tee /var/lib/dbus/machine-id",
-        "#",
-        "#",
+      "inline": [
         "#  Disable root + packer users + exit out",
-        "#",
-        "sudo passwd --l {{user `ssh_username`}}",
-        "sudo passwd --l root",
+        "#sudo passwd --quiet --lock root",
+        "sudo passwd --quiet --lock {{user `ssh_username`}}",
         "exit 0"
-			]
-		}
-	],
+      ]
+    }
+  ],
   "post-processors": [
     {
       "type": "shell-local",
